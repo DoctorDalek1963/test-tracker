@@ -1,0 +1,10 @@
+[package]
+name = "test-tracker-shared"
+version = "0.1.0-dev"
+edition = "2021"
+authors = ["Dyson Dyson <dyson.dyson@icloud.com>"]
+description = "This is the shared library for TestTracker."
+license = "GPL-3.0"
+
+[dependencies]
+serde = { version = "1.0.159", features = ["derive"] }

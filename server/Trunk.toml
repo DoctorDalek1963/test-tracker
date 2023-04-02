@@ -1,0 +1,7 @@
+[watch]
+ignore = ["sass.css", "sass.css.map", "_main.css"]
+
+[[hooks]]
+stage = "pre_build"
+command = "sh"
+command_arguments = ["-c", "sass main.scss sass.css && postcss --use autoprefixer -o _main.css sass.css"]

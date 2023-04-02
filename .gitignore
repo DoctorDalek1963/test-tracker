@@ -1,0 +1,9 @@
+.env
+target/
+server.log*
+
+# Trunk stuff
+sass.css
+sass.css.map
+_main.css
+dist/
