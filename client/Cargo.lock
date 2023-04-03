@@ -1074,12 +1074,15 @@ name = "test-tracker-client"
 version = "0.1.0-dev"
 dependencies = [
  "console_error_panic_hook",
+ "lazy_static",
  "reqwest-wasm",
  "ron",
  "test-tracker-shared",
  "tracing",
  "tracing-unwrap",
  "tracing-wasm",
+ "wasm-bindgen",
+ "web-sys",
  "yew",
 ]
 

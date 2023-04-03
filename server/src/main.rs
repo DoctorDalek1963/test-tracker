@@ -1,5 +1,6 @@
 //! This is the server for TestTracker, which uses a PostgreSQL database to store all the data.
 
+use self::passwords::{add_new_user, validate_user};
 use color_eyre::Result;
 use std::io;
 use test_tracker_shared::{ClientToServerMsg, ServerToClientMsg};
@@ -7,7 +8,8 @@ use tiny_http::{Header, Request, Response};
 use tracing::{info, instrument};
 use tracing_unwrap::ResultExt;
 
-mod db;
+pub(crate) mod db;
+mod passwords;
 
 /// Handle a single HTTP request.
 #[instrument(skip_all, fields(addr = ?req.remote_addr()))]
@@ -20,13 +22,34 @@ async fn handle_request(mut req: Request) -> Result<()> {
 
     match msg {
         ClientToServerMsg::Authenticate { username, password } => {
-            info!(?username, ?password, "Trying to authenticate");
+            info!(?username, ?password, "Authenticating");
+            let validation_result = validate_user(&username, &password).map_err(|e| e.to_string());
+            info!(?validation_result);
+
             req.respond(
                 Response::from_string(
-                    ron::to_string(&ServerToClientMsg::AuthenticationResponse {
-                        successful: true,
-                        username,
-                    })
+                    ron::to_string(&ServerToClientMsg::AuthenticationResponse(
+                            validation_result
+                    ))
+                    .unwrap(),
+                )
+                // Tell CORS to shut up
+                .with_header(Header {
+                    field: "Access-Control-Allow-Origin".parse().unwrap(),
+                    value: "*".parse().unwrap(),
+                }),
+            )?;
+        }
+        ClientToServerMsg::CreateUser { username, password } => {
+            info!(?username, ?password, "Creating new user");
+            let add_new_user_result = add_new_user(&username, &password).map_err(|e| e.to_string());
+            info!(?add_new_user_result);
+
+            req.respond(
+                Response::from_string(
+                    ron::to_string(&ServerToClientMsg::AuthenticationResponse(
+                            add_new_user_result
+                    ))
                     .unwrap(),
                 )
                 // Tell CORS to shut up
@@ -66,7 +89,6 @@ async fn main() -> io::Result<()> {
 
     let server = tiny_http::Server::http(concat!("localhost:", env!("PORT")))
         .expect_or_log("Creating the server should not fail");
-    let _conn = db::establish_connection();
 
     info!("Server initialised");
 
