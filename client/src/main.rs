@@ -1,6 +1,6 @@
 //! This crate provides a web interface to TestTracker.
 
-use self::comps::login_form::LoginForm;
+use self::comps::login_form::LoginOrCreateAccountForm;
 use lazy_static::lazy_static;
 use reqwest_wasm::Client;
 use std::{error::Error, sync::Arc};
@@ -43,47 +43,57 @@ impl<E: Error + 'static> From<E> for AppMsg {
 impl App {
     #[instrument(skip_all)]
     fn view_login_screen(&self, ctx: &Context<Self>) -> Html {
-        let onsubmit = ctx.link().callback_future(move |(username, password)| {
-            let client = Arc::clone(&REQWEST_CLIENT);
+        macro_rules! onsubmit_login_or_create_account {
+            ($message:ident) => {
+                ctx.link().callback_future(move |(username, password)| {
+                    let client = Arc::clone(&REQWEST_CLIENT);
 
-            // This async block messages the server to try to authenticate a user
-            async move {
-                debug!("Sending auth request to server");
-                match client
-                    .post(env!("SERVER_URL"))
-                    .body(
-                        ron::to_string(&ClientToServerMsg::Authenticate { username, password })
-                            .expect_or_log(
-                                "Converting a ClientToServerMsg to a RON string shouldn't fail",
-                            ),
-                    )
-                    .send()
-                    .await
-                {
-                    Ok(response) => {
-                        debug!(?response);
-                        let text = response.text().await;
-                        debug!(?text);
+                    // This async block messages the server to try to authenticate a user
+                    async move {
+                        debug!("Sending auth request to server");
+                        match client
+                            .post(env!("SERVER_URL"))
+                            .body(
+                                ron::to_string(&ClientToServerMsg::$message {
+                                    username,
+                                    password,
+                                })
+                                .expect_or_log(
+                                    "Converting a ClientToServerMsg to a RON string shouldn't fail",
+                                ),
+                            )
+                            .send()
+                            .await
+                        {
+                            Ok(response) => {
+                                debug!(?response);
+                                let text = response.text().await;
+                                debug!(?text);
 
-                        match text {
-                            Ok(body) => {
-                                let msg = ron::from_str(&body);
-                                debug!(?msg);
-                                match msg {
-                                    Ok(msg) => AppMsg::ServerMsg(msg),
+                                match text {
+                                    Ok(body) => {
+                                        let msg = ron::from_str(&body);
+                                        debug!(?msg);
+                                        match msg {
+                                            Ok(msg) => AppMsg::ServerMsg(msg),
+                                            Err(e) => e.into(),
+                                        }
+                                    }
                                     Err(e) => e.into(),
                                 }
                             }
                             Err(e) => e.into(),
                         }
                     }
-                    Err(e) => e.into(),
-                }
-            }
-        });
+                })
+            };
+        }
+
+        let onsubmit_login = onsubmit_login_or_create_account!(Authenticate);
+        let onsubmit_create_account = onsubmit_login_or_create_account!(CreateUser);
 
         html! {
-            <LoginForm {onsubmit} />
+            <LoginOrCreateAccountForm {onsubmit_login} {onsubmit_create_account} />
         }
     }
 

@@ -3,7 +3,7 @@
 use tracing::{instrument, trace};
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
 use web_sys::HtmlInputElement;
-use yew::{function_component, html, use_state, Callback, Html, Properties};
+use yew::{function_component, html, use_state, Callback, Component, Context, Html, Properties};
 
 /// Get the text value from the given input event.
 #[instrument]
@@ -17,17 +17,101 @@ fn get_value_from_input_event(event: yew::Event) -> String {
     value
 }
 
-/// The props to use for the login form.
+/// The props for the [`LoginOrCreateAccountForm`].
 #[derive(Clone, Debug, PartialEq, Properties)]
-pub struct Props {
-    /// The callback to run when th login form is submitted. It takes the username and password as
-    /// arguments.
-    pub onsubmit: Callback<(String, String)>,
+pub struct LoginOrCreateAccountProps {
+    /// The callback to run when the user tries to login. Takes username and password.
+    pub onsubmit_login: Callback<(String, String)>,
+
+    /// The callback to run when the user tries to create a new account. Takes username and password.
+    pub onsubmit_create_account: Callback<(String, String)>,
 }
 
-/// Provide a login form prompting for username and password.
-#[function_component(LoginForm)]
-pub fn login_form(props: &Props) -> Html {
+/// The tabs for logging in or creating a new account.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LoginOrCreateAccountTab {
+    /// Login.
+    Login,
+
+    /// Create a new account.
+    CreateAccount,
+}
+
+/// A component to manage logging in and creating accounts, with the options presented in tabs.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct LoginOrCreateAccountForm {
+    /// Which tab is currently selected.
+    tab: LoginOrCreateAccountTab,
+}
+
+impl LoginOrCreateAccountForm {
+    /// View the login tab.
+    fn view_login_tab(&self, ctx: &Context<Self>) -> Html {
+        let onsubmit = ctx.props().onsubmit_login.clone();
+        html! {
+            <InternalLoginForm {onsubmit} title={"Login"} />
+        }
+    }
+
+    /// View the create account tab.
+    fn view_create_account_tab(&self, ctx: &Context<Self>) -> Html {
+        let onsubmit = ctx.props().onsubmit_create_account.clone();
+        html! {
+            <InternalLoginForm {onsubmit} title={"Create account"} />
+        }
+    }
+}
+
+impl Component for LoginOrCreateAccountForm {
+    type Message = LoginOrCreateAccountTab;
+    type Properties = LoginOrCreateAccountProps;
+
+    fn create(_ctx: &Context<Self>) -> Self {
+        Self {
+            tab: LoginOrCreateAccountTab::Login,
+        }
+    }
+
+    fn view(&self, ctx: &Context<Self>) -> Html {
+        let form = match self.tab {
+            LoginOrCreateAccountTab::Login => self.view_login_tab(ctx),
+            LoginOrCreateAccountTab::CreateAccount => self.view_create_account_tab(ctx),
+        };
+
+        let login_tab = ctx.link().callback(|_event| LoginOrCreateAccountTab::Login);
+        let create_account_tab = ctx
+            .link()
+            .callback(|_event| LoginOrCreateAccountTab::CreateAccount);
+
+        html! {
+            <div class="login-or-create-account-form">
+                <button class="tab" onclick={login_tab}>{"Login"}</button>
+                <button class="tab" onclick={create_account_tab}>{"Create account"}</button>
+                {form}
+            </div>
+        }
+    }
+
+    fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
+        self.tab = msg;
+        true
+    }
+}
+
+/// The props for the [`InternalLoginForm`].
+#[derive(Clone, Debug, PartialEq, Properties)]
+struct InternalLoginProps {
+    /// The callback to run when the login form is submitted. It takes the username and password as
+    /// arguments.
+    onsubmit: Callback<(String, String)>,
+
+    /// The title of this form.
+    title: String,
+}
+
+/// An implementation detail for ease of creating login-like forms.
+#[function_component(InternalLoginForm)]
+fn internal_login_form(props: &InternalLoginProps) -> Html {
     let username = use_state(|| String::new());
     let password = use_state(|| String::new());
 
@@ -51,10 +135,11 @@ pub fn login_form(props: &Props) -> Html {
 
     html! {
         <div class="login-form">
+            <h5> {props.title.clone()} </h5>
             <label> {"Username"} </label>
-            <input type="text" name="username" onchange={on_username_changed} />
+            <input type="text" name="username" onchange={on_username_changed} /><br/>
             <label> {"Password"} </label>
-            <input type="text" name="password" onchange={on_password_changed} />
+            <input type="text" name="password" onchange={on_password_changed} /><br/>
             <button {onclick}> {"Submit"} </button>
         </div>
     }
