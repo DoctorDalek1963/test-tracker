@@ -2,10 +2,9 @@
 
 use self::passwords::{add_new_user, validate_user};
 use color_eyre::Result;
-use std::io;
 use test_tracker_shared::{ClientToServerMsg, ServerToClientMsg};
 use tiny_http::{Header, Request, Response};
-use tracing::{info, instrument};
+use tracing::{error, info, instrument};
 use tracing_unwrap::ResultExt;
 
 pub(crate) mod db;
@@ -82,13 +81,28 @@ fn setup_global_tracing_subscriber() {
 /// Create and run the server indefinitely.
 #[tokio::main]
 #[instrument]
-async fn main() -> io::Result<()> {
+async fn main() -> Result<()> {
     setup_global_tracing_subscriber();
 
     info!(port = env!("PORT"), "Initialising server");
 
-    let server = tiny_http::Server::http(concat!("localhost:", env!("PORT")))
-        .expect_or_log("Creating the server should not fail");
+    let server = match tiny_http::Server::https(
+        concat!("localhost:", env!("PORT")),
+        tiny_http::SslConfig {
+            certificate: include_bytes!(env!("SERVER_SSL_CERT_PATH")).to_vec(),
+            private_key: include_bytes!(env!("SERVER_SSL_KEY_PATH")).to_vec(),
+        },
+    ) {
+        Ok(server) => server,
+        Err(error) => {
+            error!(
+                ?error,
+                "Error creating HTTPS server; defaulting to HTTP server"
+            );
+            tiny_http::Server::http(concat!("localhost:", env!("PORT")))
+                .expect_or_log("Unable to create HTTP server")
+        }
+    };
 
     info!("Server initialised");
 
