@@ -3,7 +3,9 @@
 use tracing::{instrument, trace};
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
 use web_sys::HtmlInputElement;
-use yew::{function_component, html, use_state, Callback, Component, Context, Html, Properties};
+use yew::{
+    classes, function_component, html, use_state, Callback, Component, Context, Html, Properties,
+};
 
 /// Get the text value from the given input event.
 #[instrument]
@@ -83,10 +85,17 @@ impl Component for LoginOrCreateAccountForm {
             .link()
             .callback(|_event| LoginOrCreateAccountTab::CreateAccount);
 
+        let (login_selected, create_account_selected) = match self.tab {
+            LoginOrCreateAccountTab::Login => (Some("selected"), None),
+            LoginOrCreateAccountTab::CreateAccount => (None, Some("selected")),
+        };
+
         html! {
             <div class="login-or-create-account-form">
-                <button class="tab" onclick={login_tab}>{"Login"}</button>
-                <button class="tab" onclick={create_account_tab}>{"Create account"}</button>
+                <div class="tabs">
+                    <button class={classes!("tab", login_selected)} onclick={login_tab}>{"Login"}</button>
+                    <button class={classes!("tab", create_account_selected)} onclick={create_account_tab}>{"Create account"}</button>
+                </div>
                 {form}
             </div>
         }
@@ -134,12 +143,18 @@ fn internal_login_form(props: &InternalLoginProps) -> Html {
     };
 
     html! {
-        <div class="login-form">
-            <h5> {props.title.clone()} </h5>
-            <label> {"Username"} </label>
-            <input type="text" name="username" onchange={on_username_changed} /><br/>
-            <label> {"Password"} </label>
-            <input type="text" name="password" onchange={on_password_changed} /><br/>
+        <div class="form">
+            <h3> {props.title.clone()} </h3>
+
+            <div class="title-and-input">
+                <label class="username"> {"Username"} </label>
+                <input class="username" type="text" name="username" onchange={on_username_changed} /><br/>
+            </div>
+            <div class="title-and-input">
+                <label class="password"> {"Password"} </label>
+                <input class="password" type="password" name="password" onchange={on_password_changed} /><br/>
+            </div>
+
             <button {onclick}> {"Submit"} </button>
         </div>
     }

@@ -1,0 +1,80 @@
+@mixin centered-flex {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	flex-direction: column;
+}
+
+:root {
+	font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
+}
+
+html, body {
+	margin: 0;
+	height: 100%;
+}
+
+button {
+	cursor: pointer;
+	user-select: none;
+}
+
+div.login-or-create-account-form {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	flex-direction: column;
+
+	width: 80%;
+	max-width: 20em;
+	height: 65%;
+	max-height: 38ex;
+	margin: 10ex auto;
+
+	border: black solid;
+
+	div.tabs {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		flex-direction: row;
+		width: 100%;
+
+		button {
+			width: 50%;
+			border: none;
+			padding: 10px 16px;
+			margin-top: 0;
+			background-color: inherit;
+			white-space: nowrap;
+
+			&.selected {
+				background-color: lightGray;
+			}
+		}
+	}
+
+	div.form {
+		display: grid;
+		gap: 1em;
+		margin-bottom: 6ex;
+
+		h3 {
+			text-align: center;
+			margin: 1ex 0 0;
+			grid-column: 1 2;
+		}
+
+		div.title-and-input {
+			display: flex;
+			justify-content: center;
+			flex-direction: column;
+		}
+
+		button {
+			margin: 0.4ex auto 0;
+			grid-column: 1 2;
+			padding: 0.5em;
+		}
+	}
+}
