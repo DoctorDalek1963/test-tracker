@@ -148,8 +148,13 @@ impl Component for App {
 fn main() {
     console_error_panic_hook::set_once();
     tracing_wasm::set_as_global_default_with_config(
+        #[cfg(debug_assertions)]
         WASMLayerConfigBuilder::new()
             .set_max_level(tracing::Level::DEBUG)
+            .build(),
+        #[cfg(not(debug_assertions))]
+        WASMLayerConfigBuilder::new()
+            .set_max_level(tracing::Level::INFO)
             .build(),
     );
 
