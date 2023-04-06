@@ -147,12 +147,12 @@ fn internal_login_form(props: &InternalLoginProps) -> Html {
             <h3> {props.title.clone()} </h3>
 
             <div class="title-and-input">
-                <label class="username"> {"Username"} </label>
-                <input class="username" type="text" name="username" onchange={on_username_changed} /><br/>
+                <label for="usernameBox"> {"Username"} </label>
+                <input id="usernameBox" type="text" name="username" onchange={on_username_changed} /><br/>
             </div>
             <div class="title-and-input">
-                <label class="password"> {"Password"} </label>
-                <input class="password" type="password" name="password" onchange={on_password_changed} /><br/>
+                <label for="passwordBox"> {"Password"} </label>
+                <input id="passwordBox" type="password" name="password" onchange={on_password_changed} /><br/>
             </div>
 
             <button {onclick}> {"Submit"} </button>
