@@ -1,6 +1,6 @@
 //! This crate provides a web interface to TestTracker.
 
-use self::comps::login_form::LoginOrCreateAccountForm;
+use self::comps::{login_form::LoginOrCreateAccountForm, navbar::Navbar};
 use lazy_static::lazy_static;
 use reqwest_wasm::Client;
 use std::{error::Error, sync::Arc};
@@ -114,9 +114,18 @@ impl Component for App {
     }
 
     fn view(&self, ctx: &yew::Context<Self>) -> Html {
-        match self.user {
+        let content = match self.user {
             Some(ref user) => self.view_main_screen(ctx, user),
             None => self.view_login_screen(ctx),
+        };
+
+        html! {
+            <>
+            <Navbar />
+            <div id="content">
+                {content}
+            </div>
+            </>
         }
     }
 

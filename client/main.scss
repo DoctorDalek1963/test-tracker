@@ -7,6 +7,17 @@
 
 :root {
 	font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
+
+	// https://coolors.co/palette/f8f9fa-e9ecef-dee2e6-ced4da-adb5bd-6c757d-495057-343a40-212529
+	--grayscale-1: #f8f9fa;
+	--grayscale-2: #e9ecef;
+	--grayscale-3: #dee2e6;
+	--grayscale-4: #ced4da;
+	--grayscale-5: #adb5bd;
+	--grayscale-6: #6c757d;
+	--grayscale-7: #495057;
+	--grayscale-8: #343a40;
+	--grayscale-9: #212529;
 }
 
 html, body {
@@ -14,9 +25,51 @@ html, body {
 	height: 100%;
 }
 
+body.light {
+	background: var(--grayscale-1);
+	color: var(--grayscale-9);
+
+	--dialog-background: var(--grayscale-4);
+	--flat-button-background: var(--grayscale-5);
+}
+
+body.dark {
+	background: var(--grayscale-9);
+	color: var(--grayscale-1);
+
+	--dialog-background: var(--grayscale-8);
+	--flat-button-background: var(--grayscale-6);
+}
+
 button {
+	color: inherit;
 	cursor: pointer;
 	user-select: none;
+
+	border: none;
+	border-radius: 0.5em;
+	background-color: var(--flat-button-background);
+	white-space: nowrap;
+}
+
+navbar {
+	display: flex;
+	padding: 0 10px;
+	flex-direction: row;
+	justify-content: space-between;
+
+	background: var(--dialog-background);
+
+	span#graduation-cap {
+		padding-left: 0.2em;
+		padding-right: 0.35em;
+	}
+
+	button#toggle-dark-mode {
+		max-height: 2.75em;
+		padding: 0.8ex;
+		margin: auto 0;
+	}
 }
 
 div.login-or-create-account-form {
@@ -31,7 +84,7 @@ div.login-or-create-account-form {
 	max-height: 38ex;
 	margin: 10ex auto;
 
-	border: black solid;
+	background: var(--dialog-background);
 
 	div.tabs {
 		display: flex;
@@ -40,16 +93,14 @@ div.login-or-create-account-form {
 		flex-direction: row;
 		width: 100%;
 
-		button {
+		button.tab {
 			width: 50%;
-			border: none;
 			padding: 10px 16px;
 			margin-top: 0;
-			background-color: inherit;
-			white-space: nowrap;
+			border-radius: 0;
 
 			&.selected {
-				background-color: lightGray;
+				background-color: inherit;
 			}
 		}
 	}
@@ -57,7 +108,8 @@ div.login-or-create-account-form {
 	div.form {
 		display: grid;
 		gap: 1em;
-		margin-bottom: 6ex;
+		margin-top: 1ex;
+		margin-bottom: 4ex;
 
 		h3 {
 			text-align: center;
