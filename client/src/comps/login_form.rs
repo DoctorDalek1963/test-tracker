@@ -1,5 +1,7 @@
 //! This module handles the login form.
 
+use crate::comps::error_message::ErrorMessage;
+use derive_more::From;
 use tracing::{instrument, trace};
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
 use web_sys::HtmlInputElement;
@@ -27,6 +29,8 @@ pub struct LoginOrCreateAccountProps {
 
     /// The callback to run when the user tries to create a new account. Takes username and password.
     pub onsubmit_create_account: Callback<(String, String)>,
+
+    pub invalid_username_or_password: bool,
 }
 
 /// The tabs for logging in or creating a new account.
@@ -39,11 +43,20 @@ pub enum LoginOrCreateAccountTab {
     CreateAccount,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, From)]
+pub enum LoginOrCreateAccountMsg {
+    ChangeTab(LoginOrCreateAccountTab),
+    ChangeError(Option<String>),
+}
+
 /// A component to manage logging in and creating accounts, with the options presented in tabs.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LoginOrCreateAccountForm {
     /// Which tab is currently selected.
     tab: LoginOrCreateAccountTab,
+
+    /// A possible error to show.
+    error: Option<String>,
 }
 
 impl LoginOrCreateAccountForm {
@@ -65,12 +78,16 @@ impl LoginOrCreateAccountForm {
 }
 
 impl Component for LoginOrCreateAccountForm {
-    type Message = LoginOrCreateAccountTab;
+    type Message = LoginOrCreateAccountMsg;
     type Properties = LoginOrCreateAccountProps;
 
-    fn create(_ctx: &Context<Self>) -> Self {
+    fn create(ctx: &Context<Self>) -> Self {
         Self {
             tab: LoginOrCreateAccountTab::Login,
+            error: match ctx.props().invalid_username_or_password {
+                true => Some("Invalid username or password".to_string()),
+                false => None,
+            },
         }
     }
 
@@ -80,30 +97,72 @@ impl Component for LoginOrCreateAccountForm {
             LoginOrCreateAccountTab::CreateAccount => self.view_create_account_tab(ctx),
         };
 
-        let login_tab = ctx.link().callback(|_event| LoginOrCreateAccountTab::Login);
-        let create_account_tab = ctx
+        let login_tab = ctx
             .link()
-            .callback(|_event| LoginOrCreateAccountTab::CreateAccount);
+            .callback(|_event| LoginOrCreateAccountMsg::ChangeTab(LoginOrCreateAccountTab::Login));
+        let create_account_tab = ctx.link().callback(|_event| {
+            LoginOrCreateAccountMsg::ChangeTab(LoginOrCreateAccountTab::CreateAccount)
+        });
 
         let (login_selected, create_account_selected) = match self.tab {
             LoginOrCreateAccountTab::Login => (Some("selected"), None),
             LoginOrCreateAccountTab::CreateAccount => (None, Some("selected")),
         };
 
+        let error_message = match &self.error {
+            Some(msg) => html! {
+                <ErrorMessage msg={msg.clone()} />
+            },
+            None => html! {},
+        };
+
         html! {
+            <>
             <div class="login-or-create-account-form">
                 <div class="tabs">
-                    <button class={classes!("tab", login_selected)} onclick={login_tab}>{"Login"}</button>
-                    <button class={classes!("tab", create_account_selected)} onclick={create_account_tab}>{"Create account"}</button>
+                    <button
+                        class={classes!("tab", login_selected)}
+                        onclick={login_tab}
+                    >
+                        { "Login" }
+                    </button>
+                    <button
+                        class={classes!("tab", create_account_selected)}
+                        onclick={create_account_tab}
+                    >
+                        { "Create account" }
+                    </button>
                 </div>
+
                 {form}
             </div>
+
+            {error_message}
+            </>
         }
     }
 
     fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
-        self.tab = msg;
-        true
+        match msg {
+            LoginOrCreateAccountMsg::ChangeTab(tab) => {
+                self.tab = tab;
+                self.error = None;
+                true
+            }
+            LoginOrCreateAccountMsg::ChangeError(error) => {
+                self.error = error;
+                true
+            }
+        }
+    }
+
+    fn changed(&mut self, ctx: &Context<Self>, _old_props: &Self::Properties) -> bool {
+        if ctx.props().invalid_username_or_password {
+            self.error = Some("Invalid username or password".to_string());
+            true
+        } else {
+            false
+        }
     }
 }
 

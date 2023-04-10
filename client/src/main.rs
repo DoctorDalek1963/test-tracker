@@ -26,6 +26,9 @@ lazy_static! {
 struct App {
     /// The user that we may or may not have authenticated.
     user: Option<User>,
+
+    /// Did the user recently enter an invalid username or password?
+    invalid_username_or_password: bool,
 }
 
 /// A message to send to the app.
@@ -97,7 +100,10 @@ impl App {
         let onsubmit_create_account = onsubmit_login_or_create_account!(CreateUser);
 
         html! {
-            <LoginOrCreateAccountForm {onsubmit_login} {onsubmit_create_account} />
+            <LoginOrCreateAccountForm
+                {onsubmit_login}
+                {onsubmit_create_account}
+                invalid_username_or_password={self.invalid_username_or_password} />
         }
     }
 
@@ -109,12 +115,21 @@ impl App {
     }
 }
 
+impl Default for App {
+    fn default() -> Self {
+        Self {
+            user: None,
+            invalid_username_or_password: false,
+        }
+    }
+}
+
 impl Component for App {
     type Message = AppMsg;
     type Properties = ();
 
     fn create(_ctx: &Context<Self>) -> Self {
-        Self { user: None }
+        Self::default()
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
@@ -139,19 +154,21 @@ impl Component for App {
         match msg {
             AppMsg::Error(e) => {
                 error!(?e, "AppMsg::Error");
+                window()
+                    .alert_with_message(&format!("Error: {e:?}"))
+                    .expect_or_log("Error alerting the user");
                 true
             }
             AppMsg::ServerMsg(msg) => match msg {
                 ServerToClientMsg::AuthenticationResponse(result) => match result {
                     Ok(user) => {
                         self.user = Some(user);
+                        self.invalid_username_or_password = false;
                         true
                     }
                     Err(SharedError::DatabaseError(SharedDieselError::NotFound)) => {
                         warn!("User not found in database");
-                        window()
-                            .alert_with_message(&format!("Your username or password is incorrect"))
-                            .expect_or_log("Error alerting the user");
+                        self.invalid_username_or_password = true;
                         true
                     }
                     Err(e) => {

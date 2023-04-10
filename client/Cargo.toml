@@ -9,6 +9,7 @@ license = "GPL-3.0"
 [dependencies]
 console_error_panic_hook = "0.1.7"
 dark-light = "1.0.0"
+derive_more = "0.99.17"
 gloo-utils = "0.1.6"
 lazy_static = "1.4.0"
 reqwest-wasm = "0.11.16"
