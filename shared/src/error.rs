@@ -2,7 +2,6 @@
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use tracing::{debug, instrument};
 
 /// The shared error type that can be used by both server and client.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Error)]
@@ -16,17 +15,22 @@ pub enum Error {
     HashingError(String),
 }
 
+/// An error that comes from Diesel, which is used to manage the database.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Error)]
 pub enum DieselError {
+    /// A DB query that was meant to return something actually returned nothing.
     #[error("something in the DB was not found")]
     NotFound,
 
+    /// Some other error occurred.
     #[error("{0}")]
     Other(String),
 }
 
 #[cfg(feature = "diesel")]
 use diesel::result::Error as DsErr;
+#[cfg(feature = "diesel")]
+use tracing::{debug, instrument};
 
 #[cfg(feature = "diesel")]
 impl From<diesel::result::Error> for DieselError {

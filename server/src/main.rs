@@ -10,6 +10,18 @@ use tracing_unwrap::ResultExt;
 pub(crate) mod db;
 mod passwords;
 
+/// Create a header that will allow the client to function properly without CORS getting in the way.
+fn no_cors_header() -> Header {
+    Header {
+        field: "Access-Control-Allow-Origin"
+            .parse()
+            .expect("This &'static str should parse just fine"),
+        value: "*"
+            .parse()
+            .expect("This &'static str should parse just fine"),
+    }
+}
+
 /// Handle a single HTTP request.
 #[instrument(skip_all, fields(addr = ?req.remote_addr()))]
 async fn handle_request(mut req: Request) -> Result<()> {
@@ -28,15 +40,11 @@ async fn handle_request(mut req: Request) -> Result<()> {
             req.respond(
                 Response::from_string(
                     ron::to_string(&ServerToClientMsg::AuthenticationResponse(
-                            validation_result
+                        validation_result,
                     ))
-                    .unwrap(),
+                    .expect("Serializing a ServerToClientMsg should never fail"),
                 )
-                // Tell CORS to shut up
-                .with_header(Header {
-                    field: "Access-Control-Allow-Origin".parse().unwrap(),
-                    value: "*".parse().unwrap(),
-                }),
+                .with_header(no_cors_header()),
             )?;
         }
         ClientToServerMsg::CreateUser { username, password } => {
@@ -47,15 +55,11 @@ async fn handle_request(mut req: Request) -> Result<()> {
             req.respond(
                 Response::from_string(
                     ron::to_string(&ServerToClientMsg::AuthenticationResponse(
-                            add_new_user_result
+                        add_new_user_result,
                     ))
-                    .unwrap(),
+                    .expect("Serializing a ServerToClientMsg should never fail"),
                 )
-                // Tell CORS to shut up
-                .with_header(Header {
-                    field: "Access-Control-Allow-Origin".parse().unwrap(),
-                    value: "*".parse().unwrap(),
-                }),
+                .with_header(no_cors_header()),
             )?;
         }
     };

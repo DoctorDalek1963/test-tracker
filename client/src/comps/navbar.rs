@@ -54,6 +54,7 @@ impl fmt::Display for DarkMode {
 }
 
 impl DarkMode {
+    /// Return the opposite mode.
     fn other(&self) -> Self {
         match self {
             Self::Light => Self::Dark,
@@ -115,9 +116,13 @@ fn init_dark_mode() -> Result<DarkMode, JsValue> {
     Ok(dark_mode)
 }
 
+/// A message to send to the navbar.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NavbarMsg {
+    /// Do nothing.
     Nothing,
+
+    /// Toggle between light mode and dark mode
     ToggleDarkMode,
 }
 
@@ -170,8 +175,8 @@ impl Component for Navbar {
 
         let text = format!(
             "Toggle to {new} mode (currently {current} mode)",
-            new = self.dark_mode.other().to_string(),
-            current = self.dark_mode.to_string()
+            new = self.dark_mode.other(),
+            current = self.dark_mode
         );
 
         html! {

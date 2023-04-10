@@ -9,6 +9,7 @@ pub struct ErrorMessage;
 /// The properties of the error message box.
 #[derive(Clone, Debug, Eq, PartialEq, Properties)]
 pub struct Props {
+    /// The message to give to the error message.
     pub msg: String,
 }
 

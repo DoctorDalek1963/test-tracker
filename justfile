@@ -38,6 +38,11 @@ watch-server:
 watch-server-release:
 	cd server; cargo watch -x "run --release"
 
+clippy:
+	cd client; cargo clippy -- -D clippy::missing_docs_in_private_items -D clippy::semicolon-if-nothing-returned -D clippy::unwrap_used
+	cd server; cargo clippy -- -D clippy::missing_docs_in_private_items -D clippy::semicolon-if-nothing-returned -D clippy::unwrap_used
+	cd shared; cargo clippy -- -D clippy::missing_docs_in_private_items -D clippy::semicolon-if-nothing-returned -D clippy::unwrap_used
+
 # setup PostgreSQL for test-tracker (assumes a Debian-based OS)
 setup:
 	sudo apt update

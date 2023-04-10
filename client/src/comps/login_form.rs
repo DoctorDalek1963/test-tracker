@@ -30,6 +30,7 @@ pub struct LoginOrCreateAccountProps {
     /// The callback to run when the user tries to create a new account. Takes username and password.
     pub onsubmit_create_account: Callback<(String, String)>,
 
+    /// Did the user recently enter an invalid username or password?
     pub invalid_username_or_password: bool,
 }
 
@@ -43,9 +44,13 @@ pub enum LoginOrCreateAccountTab {
     CreateAccount,
 }
 
+/// A message type for [`LoginOrCreateAccountForm`] to use.
 #[derive(Clone, Debug, Eq, PartialEq, From)]
 pub enum LoginOrCreateAccountMsg {
+    /// Change to the specified tab.
     ChangeTab(LoginOrCreateAccountTab),
+
+    /// Change (or clear) the current error message.
     ChangeError(Option<String>),
 }
 

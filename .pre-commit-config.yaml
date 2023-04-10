@@ -12,9 +12,15 @@ repos:
 
   - repo: local
     hooks:
+      - id: just-clippy
+        name: just clippy
+        entry: just clippy
+        language: system
+        pass_filenames: false
+
       - id: cargo-fmt
         name: cargo fmt
-        entry: bash -c 'for dir in client server shared; do cd $dir; cargo check; cd ..; done'
+        entry: bash -c 'for dir in client server shared; do cd $dir; cargo fmt; cd ..; done'
         language: system
         pass_filenames: false
 

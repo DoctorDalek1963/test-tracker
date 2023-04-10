@@ -50,6 +50,7 @@ impl<E: Error + 'static> From<E> for AppMsg {
 impl App {
     #[instrument(skip_all)]
     fn view_login_screen(&self, ctx: &Context<Self>) -> Html {
+        /// Generate an `onsubmit` callback for logging in or creating an account.
         macro_rules! onsubmit_login_or_create_account {
             ($message:ident) => {
                 ctx.link().callback_future(move |(username, password)| {
