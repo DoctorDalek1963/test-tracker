@@ -1,5 +1,8 @@
 //! This crate is a library to be shared between the client and server halves of TestTracker.
 
+pub mod error;
+
+pub use self::error::Error;
 use serde::{Deserialize, Serialize};
 
 /// A message that the client can send to the server.
@@ -28,7 +31,7 @@ pub enum ClientToServerMsg {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum ServerToClientMsg {
     /// A response to authentication.
-    AuthenticationResponse(Result<User, String>),
+    AuthenticationResponse(Result<User, Error>),
 }
 
 /// The relevant information about a user.

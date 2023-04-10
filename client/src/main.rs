@@ -1,11 +1,15 @@
 //! This crate provides a web interface to TestTracker.
 
 use self::comps::{login_form::LoginOrCreateAccountForm, navbar::Navbar};
+use gloo_utils::window;
 use lazy_static::lazy_static;
 use reqwest_wasm::Client;
 use std::{error::Error, sync::Arc};
-use test_tracker_shared::{ClientToServerMsg, ServerToClientMsg, User};
-use tracing::{debug, error, info, instrument};
+use test_tracker_shared::{
+    error::DieselError as SharedDieselError, ClientToServerMsg, Error as SharedError,
+    ServerToClientMsg, User,
+};
+use tracing::{debug, error, info, instrument, warn};
 use tracing_unwrap::ResultExt;
 use tracing_wasm::WASMLayerConfigBuilder;
 use yew::{html, Component, Context, Html};
@@ -109,11 +113,11 @@ impl Component for App {
     type Message = AppMsg;
     type Properties = ();
 
-    fn create(_ctx: &yew::Context<Self>) -> Self {
+    fn create(_ctx: &Context<Self>) -> Self {
         Self { user: None }
     }
 
-    fn view(&self, ctx: &yew::Context<Self>) -> Html {
+    fn view(&self, ctx: &Context<Self>) -> Html {
         let content = match self.user {
             Some(ref user) => self.view_main_screen(ctx, user),
             None => self.view_login_screen(ctx),
@@ -130,11 +134,11 @@ impl Component for App {
     }
 
     #[instrument(skip_all)]
-    fn update(&mut self, _ctx: &yew::Context<Self>, msg: Self::Message) -> bool {
+    fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
         debug!(?msg);
         match msg {
             AppMsg::Error(e) => {
-                error!(?e);
+                error!(?e, "AppMsg::Error");
                 true
             }
             AppMsg::ServerMsg(msg) => match msg {
@@ -143,9 +147,21 @@ impl Component for App {
                         self.user = Some(user);
                         true
                     }
+                    Err(SharedError::DatabaseError(SharedDieselError::NotFound)) => {
+                        warn!("User not found in database");
+                        window()
+                            .alert_with_message(&format!("Your username or password is incorrect"))
+                            .expect_or_log("Error alerting the user");
+                        true
+                    }
                     Err(e) => {
-                        error!(?e, "Error authenticating user");
-                        todo!("Display this error to the user")
+                        error!(?e, "Unknown error authenticating user");
+                        window()
+                            .alert_with_message(&format!(
+                                "Unknown error authenticating user: {e:?}"
+                            ))
+                            .expect_or_log("Error alerting the user");
+                        true
                     }
                 },
             },

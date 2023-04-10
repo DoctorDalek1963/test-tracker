@@ -22,7 +22,7 @@ async fn handle_request(mut req: Request) -> Result<()> {
     match msg {
         ClientToServerMsg::Authenticate { username, password } => {
             info!(?username, ?password, "Authenticating");
-            let validation_result = validate_user(&username, &password).map_err(|e| e.to_string());
+            let validation_result = validate_user(&username, &password).map_err(|e| e.into());
             info!(?validation_result);
 
             req.respond(
@@ -41,7 +41,7 @@ async fn handle_request(mut req: Request) -> Result<()> {
         }
         ClientToServerMsg::CreateUser { username, password } => {
             info!(?username, ?password, "Creating new user");
-            let add_new_user_result = add_new_user(&username, &password).map_err(|e| e.to_string());
+            let add_new_user_result = add_new_user(&username, &password).map_err(|e| e.into());
             info!(?add_new_user_result);
 
             req.respond(

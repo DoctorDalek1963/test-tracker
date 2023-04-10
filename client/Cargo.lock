@@ -1641,6 +1641,8 @@ name = "test-tracker-shared"
 version = "0.1.0-dev"
 dependencies = [
  "serde",
+ "thiserror",
+ "tracing",
 ]
 
 [[package]]

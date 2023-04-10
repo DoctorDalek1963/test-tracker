@@ -11,7 +11,7 @@ use argon2::{
     Argon2,
 };
 use diesel::{result::Error as DbError, RunQueryDsl};
-use test_tracker_shared::User as SharedUser;
+use test_tracker_shared::{Error as SharedError, User as SharedUser};
 use thiserror::Error;
 use tracing_unwrap::ResultExt;
 
@@ -48,6 +48,17 @@ pub enum NewUserError {
 impl From<HashingError> for NewUserError {
     fn from(value: HashingError) -> Self {
         Self::HashingError(value)
+    }
+}
+
+impl From<NewUserError> for SharedError {
+    fn from(value: NewUserError) -> Self {
+        match value {
+            NewUserError::DbError(err) => SharedError::DatabaseError(err.into()),
+            NewUserError::HashingError(err) => {
+                SharedError::HashingError(format!("{err} ({err:?})"))
+            }
+        }
     }
 }
 

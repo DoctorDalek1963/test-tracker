@@ -9,7 +9,7 @@ license = "GPL-3.0"
 [dependencies]
 diesel = { version = "2.0.3", features = ["postgres"] }
 tokio = { version = "1.27.0", features = ["io-util", "macros", "net", "rt-multi-thread", "time"] }
-test-tracker-shared = { path = "../shared" }
+test-tracker-shared = { path = "../shared", features = ["diesel"] }
 tracing = "0.1.37"
 tracing-appender = "0.2.2"
 tracing-subscriber = "0.3.16"
