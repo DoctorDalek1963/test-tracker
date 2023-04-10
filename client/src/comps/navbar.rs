@@ -1,11 +1,11 @@
 //! This module provides the component for the navbar.
 
-use gloo_utils::{body, window};
+use crate::{web::local_storage, STORAGE_KEY_DARK_MODE};
+use gloo_utils::body;
 use std::fmt;
 use tracing::{debug, instrument, trace};
 use tracing_unwrap::ResultExt;
 use wasm_bindgen::JsValue;
-use web_sys::Storage;
 use yew::{html, Component, Html};
 
 /// Dark mode or light mode.
@@ -63,24 +63,17 @@ impl DarkMode {
     }
 }
 
-/// Return the `localStorage`.
-fn local_storage() -> Result<Storage, JsValue> {
-    Ok(window().local_storage()?.expect(
-        "The client should only be run in web environments, so localStorage should always exist",
-    ))
-}
-
-/// Get the value of the `testTrackerDarkMode` key in `localStorage` if it's available.
+/// Get the value of the dark mode key in `localStorage` if it's available.
 #[instrument]
 fn storage_get_dark_mode() -> Result<Option<DarkMode>, JsValue> {
-    let dark_mode = local_storage()?.get_item("testTrackerDarkMode")?;
-    debug!(?dark_mode, "testTrackerDarkMode from local storage");
+    let dark_mode = local_storage().get_item(STORAGE_KEY_DARK_MODE)?;
+    debug!(?dark_mode, "Dark mode key from local storage");
     Ok(dark_mode.map(|mode| mode.into()))
 }
 
-/// Set the value of the `testTrackerDarkMode` key in `localStorage`.
+/// Set the value of the dark mode key in `localStorage`.
 fn storage_set_dark_mode(dark_mode: DarkMode) -> Result<(), JsValue> {
-    local_storage()?.set_item("testTrackerDarkMode", &dark_mode.to_string())
+    local_storage().set_item(STORAGE_KEY_DARK_MODE, &dark_mode.to_string())
 }
 
 /// Set dark mode on the body of the HTML by adding or removing the "dark" class.
@@ -190,7 +183,7 @@ impl Component for Navbar {
                 trace!(starting_mode = ?self.dark_mode, "Toggling dark mode");
                 self.dark_mode = self.dark_mode.other();
                 storage_set_dark_mode(self.dark_mode)
-                    .expect_or_log("We should be able to set the testTrackerDarkMode value");
+                    .expect_or_log("We should be able to set the dark mode value");
                 set_dark_mode_on_body(self.dark_mode)
                     .expect_or_log("We should be able to change the dark mode class on the body");
                 trace!(ending_mode = ?self.dark_mode, "Toggled dark mode");

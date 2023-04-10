@@ -14,6 +14,7 @@ gloo-utils = "0.1.6"
 lazy_static = "1.4.0"
 reqwest-wasm = "0.11.16"
 ron = "0.8.0"
+serde = "1.0.159"
 test-tracker-shared = { path = "../shared" }
 tracing = "0.1.37"
 tracing-unwrap = "0.10.0"

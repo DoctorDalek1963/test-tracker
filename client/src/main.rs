@@ -1,6 +1,11 @@
 //! This crate provides a web interface to TestTracker.
 
-use self::comps::{login_form::LoginOrCreateAccountForm, navbar::Navbar};
+#![feature(min_specialization)]
+
+use self::{
+    comps::{login_form::LoginOrCreateAccountForm, navbar::Navbar},
+    web::{get_user, local_storage, session_storage},
+};
 use gloo_utils::window;
 use lazy_static::lazy_static;
 use reqwest_wasm::Client;
@@ -15,6 +20,13 @@ use tracing_wasm::WASMLayerConfigBuilder;
 use yew::{html, Component, Context, Html};
 
 mod comps;
+mod web;
+
+/// The key for the dark mode key in browser storage.
+pub(crate) const STORAGE_KEY_DARK_MODE: &str = "testTrackerDarkMode";
+
+/// The key for the user key in browser storage.
+pub(crate) const STORAGE_KEY_USER: &str = "testTrackerUser";
 
 lazy_static! {
     /// The client to use for making async requests to the server.
@@ -34,16 +46,25 @@ struct App {
 /// A message to send to the app.
 #[derive(Debug)]
 enum AppMsg {
-    /// An error has occured. Tell the user.
-    Error(Box<dyn Error>),
+    /// An error from the server has occured. Tell the user.
+    SharedError(SharedError),
 
-    /// We have received a message from the server.
-    ServerMsg(ServerToClientMsg),
+    /// An unknown error has occured. Tell the user.
+    UnknownError(Box<dyn Error>),
+
+    /// Authenticate a user. The bool reflects the "remember me" checkbox.
+    AuthenticateUser(User, bool),
 }
 
 impl<E: Error + 'static> From<E> for AppMsg {
-    fn from(value: E) -> Self {
-        Self::Error(Box::new(value))
+    default fn from(value: E) -> Self {
+        Self::UnknownError(Box::new(value))
+    }
+}
+
+impl From<SharedError> for AppMsg {
+    fn from(value: SharedError) -> Self {
+        Self::SharedError(value)
     }
 }
 
@@ -88,7 +109,12 @@ impl App {
                                         let msg = ron::from_str(&body);
                                         debug!(?msg);
                                         match msg {
-                                            Ok(msg) => AppMsg::ServerMsg(msg),
+                                            Ok(msg) => match msg {
+                                                ServerToClientMsg::AuthenticationResponse(result) => match result {
+                                                    Ok(user) => AppMsg::AuthenticateUser(user, remember_me),
+                                                    Err(e) => e.into()
+                                                }
+                                            },
                                             Err(e) => e.into(),
                                         }
                                     }
@@ -124,7 +150,7 @@ impl App {
 impl Default for App {
     fn default() -> Self {
         Self {
-            user: None,
+            user: get_user(),
             invalid_username_or_password: false,
         }
     }
@@ -158,39 +184,51 @@ impl Component for App {
     fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
         debug!(?msg);
         match msg {
-            AppMsg::Error(e) => {
-                error!(?e, "AppMsg::Error");
+            AppMsg::AuthenticateUser(user, remember_me) => {
+                let user_str = ron::to_string(&user)
+                    .expect_or_log("We should be able to serialize a User to a String");
+
+                local_storage()
+                    .set_item(STORAGE_KEY_USER, &user_str)
+                    .expect_or_log(
+                        "We should be able to set a localStorage value without a problem",
+                    );
+
+                if remember_me {
+                    session_storage()
+                        .set_item(STORAGE_KEY_USER, &user_str)
+                        .expect_or_log(
+                            "We should be able to set a sessionStorage value without a problem",
+                        );
+                }
+
+                self.user = Some(user);
+                self.invalid_username_or_password = false;
+
+                true
+            }
+            AppMsg::SharedError(error) => match error {
+                SharedError::DatabaseError(SharedDieselError::NotFound)
+                | SharedError::InvalidPassword => {
+                    warn!("Invalid username or password");
+                    self.invalid_username_or_password = true;
+                    true
+                }
+                e => {
+                    error!(?e);
+                    window()
+                        .alert_with_message(&format!("Error: {e:?}"))
+                        .expect_or_log("Error alerting the user");
+                    true
+                }
+            },
+            AppMsg::UnknownError(error) => {
+                error!(?error, "Unknown error");
                 window()
-                    .alert_with_message(&format!("Error: {e:?}"))
+                    .alert_with_message(&format!("Unknown error: {error:?}"))
                     .expect_or_log("Error alerting the user");
                 true
             }
-            AppMsg::ServerMsg(msg) => match msg {
-                ServerToClientMsg::AuthenticationResponse(result) => match result {
-                    Ok(user) => {
-                        self.user = Some(user);
-                        self.invalid_username_or_password = false;
-                        true
-                    }
-                    Err(
-                        SharedError::DatabaseError(SharedDieselError::NotFound)
-                        | SharedError::InvalidPassword,
-                    ) => {
-                        warn!("Invalid username or password");
-                        self.invalid_username_or_password = true;
-                        true
-                    }
-                    Err(e) => {
-                        error!(?e, "Unknown error authenticating user");
-                        window()
-                            .alert_with_message(&format!(
-                                "Unknown error authenticating user: {e:?}"
-                            ))
-                            .expect_or_log("Error alerting the user");
-                        true
-                    }
-                },
-            },
         }
     }
 }
