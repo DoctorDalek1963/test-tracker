@@ -649,6 +649,7 @@ name = "test-tracker-shared"
 version = "0.1.0-dev"
 dependencies = [
  "diesel",
+ "password-hash",
  "serde",
  "thiserror",
  "tracing",

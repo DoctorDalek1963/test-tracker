@@ -55,9 +55,7 @@ impl From<NewUserError> for SharedError {
     fn from(value: NewUserError) -> Self {
         match value {
             NewUserError::DbError(err) => SharedError::DatabaseError(err.into()),
-            NewUserError::HashingError(err) => {
-                SharedError::HashingError(format!("{err} ({err:?})"))
-            }
+            NewUserError::HashingError(err) => err.into(),
         }
     }
 }

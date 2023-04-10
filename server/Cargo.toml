@@ -12,7 +12,7 @@ color-eyre = "0.6.2"
 diesel = { version = "2.0.3", features = ["postgres"] }
 rand = "0.8.5"
 ron = "0.8.0"
-test-tracker-shared = { path = "../shared", features = ["diesel"] }
+test-tracker-shared = { path = "../shared", features = ["diesel", "hashing"] }
 thiserror = "1.0.40"
 tiny_http = { version = "0.12.0", features = ["ssl-openssl"] }
 tokio = { version = "1.27.0", features = ["io-util", "macros", "net", "rt-multi-thread", "time"] }

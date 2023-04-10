@@ -8,16 +8,17 @@
 :root {
 	font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
 
-	// https://coolors.co/palette/f8f9fa-e9ecef-dee2e6-ced4da-adb5bd-6c757d-495057-343a40-212529
+	// https://coolors.co/palette/f8f9fa-e9ecef-dee2e6-ced4da-adb5bd-6c757d-5a626a-495057-343a40-212529
 	--grayscale-1: #f8f9fa;
 	--grayscale-2: #e9ecef;
 	--grayscale-3: #dee2e6;
 	--grayscale-4: #ced4da;
 	--grayscale-5: #adb5bd;
 	--grayscale-6: #6c757d;
-	--grayscale-7: #495057;
-	--grayscale-8: #343a40;
-	--grayscale-9: #212529;
+	--grayscale-7: #5a626a;
+	--grayscale-8: #495057;
+	--grayscale-9: #343a40;
+	--grayscale-10: #212529;
 }
 
 html, body {
@@ -27,7 +28,7 @@ html, body {
 
 body.light {
 	background: var(--grayscale-1);
-	color: var(--grayscale-9);
+	color: var(--grayscale-10);
 
 	--dialog-background: var(--grayscale-4);
 	--flat-button-background: var(--grayscale-5);
@@ -36,11 +37,11 @@ body.light {
 }
 
 body.dark {
-	background: var(--grayscale-9);
+	background: var(--grayscale-10);
 	color: var(--grayscale-1);
 
-	--dialog-background: var(--grayscale-8);
-	--flat-button-background: var(--grayscale-6);
+	--dialog-background: var(--grayscale-9);
+	--flat-button-background: var(--grayscale-7);
 	--error-message-background: #e52444;
 	--error-message-border: #a50200;
 }
@@ -139,10 +140,22 @@ div.login-or-create-account-form {
 			grid-column: 1 2;
 		}
 
-		div.title-and-input {
+		div.label-and-input-box {
 			display: flex;
 			justify-content: center;
 			flex-direction: column;
+		}
+
+		div.label-and-checkbox {
+			display: flex;
+			justify-content: center;
+			flex-direction: row;
+
+			width: fit-content;
+
+			label {
+				margin-left: 0.3em;
+			}
 		}
 
 		button {

@@ -10,6 +10,10 @@ pub enum Error {
     #[error("error accessing the database: {0}")]
     DatabaseError(DieselError),
 
+    /// The given password didn't match.
+    #[error("invalid password")]
+    InvalidPassword,
+
     /// An error occurred when trying to hash the user's password.
     #[error("error hashing password: {0}")]
     HashingError(String),
@@ -28,19 +32,34 @@ pub enum DieselError {
 }
 
 #[cfg(feature = "diesel")]
-use diesel::result::Error as DsErr;
-#[cfg(feature = "diesel")]
-use tracing::{debug, instrument};
+mod diesel {
+    use super::*;
+    use ::diesel::result::Error as DsErr;
+    use tracing::{debug, instrument};
 
-#[cfg(feature = "diesel")]
-impl From<diesel::result::Error> for DieselError {
-    #[instrument(name = "from_diesel_internal_error", level = "debug")]
-    fn from(value: DsErr) -> Self {
-        let shared_error = match value {
-            DsErr::NotFound => Self::NotFound,
-            err => Self::Other(format!("{err:?}")),
-        };
-        debug!(?shared_error);
-        shared_error
+    impl From<::diesel::result::Error> for DieselError {
+        #[instrument(name = "from_diesel_internal_error", level = "debug")]
+        fn from(value: DsErr) -> Self {
+            let shared_error = match value {
+                DsErr::NotFound => Self::NotFound,
+                err => Self::Other(format!("{err:?}")),
+            };
+            debug!(?shared_error);
+            shared_error
+        }
+    }
+}
+
+#[cfg(feature = "hashing")]
+mod hashing {
+    use super::*;
+
+    impl From<password_hash::Error> for Error {
+        fn from(value: password_hash::Error) -> Self {
+            match value {
+                password_hash::Error::Password => Self::InvalidPassword,
+                err => Self::HashingError(format!("{err:?}")),
+            }
+        }
     }
 }

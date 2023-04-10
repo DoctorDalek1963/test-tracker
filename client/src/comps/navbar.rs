@@ -5,7 +5,7 @@ use std::fmt;
 use tracing::{debug, instrument, trace};
 use tracing_unwrap::ResultExt;
 use wasm_bindgen::JsValue;
-use web_sys::{MouseEvent, Storage};
+use web_sys::Storage;
 use yew::{html, Component, Html};
 
 /// Dark mode or light mode.
@@ -119,9 +119,6 @@ fn init_dark_mode() -> Result<DarkMode, JsValue> {
 /// A message to send to the navbar.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NavbarMsg {
-    /// Do nothing.
-    Nothing,
-
     /// Toggle between light mode and dark mode
     ToggleDarkMode,
 }
@@ -165,13 +162,7 @@ impl Component for Navbar {
             </svg>
         };
 
-        let onclick = ctx.link().callback(|event: MouseEvent| {
-            if event.detail() == 0 {
-                NavbarMsg::Nothing
-            } else {
-                NavbarMsg::ToggleDarkMode
-            }
-        });
+        let onclick = ctx.link().callback(|_event| NavbarMsg::ToggleDarkMode);
 
         let text = format!(
             "Toggle to {new} mode (currently {current} mode)",
@@ -195,7 +186,6 @@ impl Component for Navbar {
     #[instrument]
     fn update(&mut self, ctx: &yew::Context<Self>, msg: Self::Message) -> bool {
         match msg {
-            NavbarMsg::Nothing => false,
             NavbarMsg::ToggleDarkMode => {
                 trace!(starting_mode = ?self.dark_mode, "Toggling dark mode");
                 self.dark_mode = self.dark_mode.other();

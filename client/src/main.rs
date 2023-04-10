@@ -53,8 +53,13 @@ impl App {
         /// Generate an `onsubmit` callback for logging in or creating an account.
         macro_rules! onsubmit_login_or_create_account {
             ($message:ident) => {
-                ctx.link().callback_future(move |(username, password)| {
+                ctx.link().callback_future(move |(username, password, remember_me)| {
                     let client = Arc::clone(&REQWEST_CLIENT);
+
+                    debug!(
+                        ?username, ?password, ?remember_me,
+                        concat!("Authenticating with ", stringify!($message))
+                    );
 
                     // This async block messages the server to try to authenticate a user
                     async move {
@@ -167,8 +172,11 @@ impl Component for App {
                         self.invalid_username_or_password = false;
                         true
                     }
-                    Err(SharedError::DatabaseError(SharedDieselError::NotFound)) => {
-                        warn!("User not found in database");
+                    Err(
+                        SharedError::DatabaseError(SharedDieselError::NotFound)
+                        | SharedError::InvalidPassword,
+                    ) => {
+                        warn!("Invalid username or password");
                         self.invalid_username_or_password = true;
                         true
                     }
