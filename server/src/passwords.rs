@@ -15,8 +15,8 @@ use test_tracker_shared::{Error as SharedError, User as SharedUser};
 use thiserror::Error;
 use tracing_unwrap::ResultExt;
 
-/// Hash and salt a password for the first time. Use [`verify_password`] to verify a password
-/// against the DB.
+/// Hash and salt a password for the first time. Use [`validate_user`] to validate a username and
+/// password against the DB.
 fn hash_and_salt_password(password: &str) -> Result<String, HashingError> {
     let salt: [u8; 16] = rand::random();
     let argon2 = Argon2::default();

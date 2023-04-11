@@ -35,6 +35,7 @@ pub enum DieselError {
     Other(String),
 }
 
+/// Implement conversions from Diesel database errors to [`enum@Error`].
 #[cfg(feature = "diesel")]
 mod diesel {
     use super::*;
@@ -61,6 +62,7 @@ mod diesel {
     }
 }
 
+/// Implement conversions from password hashing errors to [`enum@Error`].
 #[cfg(feature = "hashing")]
 mod hashing {
     use super::*;

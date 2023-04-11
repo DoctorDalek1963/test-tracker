@@ -46,7 +46,7 @@ struct App {
 /// A message to send to the app.
 #[derive(Debug)]
 enum AppMsg {
-    /// Manually change or reset the internal [`error_message`].
+    /// Manually change or reset the internal [`error_message`](App::error_message).
     ChangeErrorMessage(Option<String>),
 
     /// An error from the server has occured. Tell the user.
