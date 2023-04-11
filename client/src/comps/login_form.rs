@@ -1,6 +1,5 @@
 //! This module handles the login form.
 
-use crate::comps::error_message::ErrorMessage;
 use derive_more::From;
 use tracing::{instrument, trace};
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
@@ -33,9 +32,6 @@ pub struct LoginOrCreateAccountProps {
 
     /// The callback for creating a new account.
     pub onsubmit_create_account: LoginOrCreateAccountCallback,
-
-    /// Did the user recently enter an invalid username or password?
-    pub invalid_username_or_password: bool,
 }
 
 /// The tabs for logging in or creating a new account.
@@ -54,9 +50,6 @@ pub enum LoginOrCreateAccountMsg {
     /// Change to the specified tab.
     ChangeTab(LoginOrCreateAccountTab),
 
-    /// Change (or clear) the current error message.
-    ChangeError(Option<String>),
-
     /// Submit a login or create account request with the given parameters.
     Submit(LoginOrCreateAccountTab, (String, String, bool)),
 }
@@ -66,26 +59,17 @@ pub enum LoginOrCreateAccountMsg {
 pub struct LoginOrCreateAccountForm {
     /// Which tab is currently selected.
     tab: LoginOrCreateAccountTab,
-
-    /// A possible error to show.
-    error: Option<String>,
 }
 
 /// Create a callback for the given tab. This callback sends a [`LoginOrCreateAccountMsg`] to
-/// [`LoginOrCreateAccountForm`] to submit the prop callback or display an appropriate error.
+/// [`LoginOrCreateAccountForm`] to submit the prop callback.
 fn create_onsubmit_callback(
     ctx: &Context<LoginOrCreateAccountForm>,
     tab: LoginOrCreateAccountTab,
 ) -> LoginOrCreateAccountCallback {
     ctx.link().callback(
         move |(username, password, remember_me): (String, String, bool)| {
-            if username.is_empty() || password.is_empty() {
-                LoginOrCreateAccountMsg::ChangeError(Some(
-                    "Please enter a username and password".to_string(),
-                ))
-            } else {
-                LoginOrCreateAccountMsg::Submit(tab, (username, password, remember_me))
-            }
+            LoginOrCreateAccountMsg::Submit(tab, (username, password, remember_me))
         },
     )
 }
@@ -112,13 +96,9 @@ impl Component for LoginOrCreateAccountForm {
     type Message = LoginOrCreateAccountMsg;
     type Properties = LoginOrCreateAccountProps;
 
-    fn create(ctx: &Context<Self>) -> Self {
+    fn create(_ctx: &Context<Self>) -> Self {
         Self {
             tab: LoginOrCreateAccountTab::Login,
-            error: match ctx.props().invalid_username_or_password {
-                true => Some("Invalid username or password".to_string()),
-                false => None,
-            },
         }
     }
 
@@ -140,15 +120,7 @@ impl Component for LoginOrCreateAccountForm {
             LoginOrCreateAccountTab::CreateAccount => (None, Some("selected")),
         };
 
-        let error_message = match &self.error {
-            Some(msg) => html! {
-                <ErrorMessage msg={msg.clone()} />
-            },
-            None => html! {},
-        };
-
         html! {
-            <>
             <div class="login-or-create-account-form">
                 <div class="tabs">
                     <button
@@ -167,9 +139,6 @@ impl Component for LoginOrCreateAccountForm {
 
                 {form}
             </div>
-
-            {error_message}
-            </>
         }
     }
 
@@ -177,11 +146,6 @@ impl Component for LoginOrCreateAccountForm {
         match msg {
             LoginOrCreateAccountMsg::ChangeTab(tab) => {
                 self.tab = tab;
-                self.error = None;
-                true
-            }
-            LoginOrCreateAccountMsg::ChangeError(error) => {
-                self.error = error;
                 true
             }
             LoginOrCreateAccountMsg::Submit(tab, params) => {
@@ -193,15 +157,6 @@ impl Component for LoginOrCreateAccountForm {
                 };
                 true
             }
-        }
-    }
-
-    fn changed(&mut self, ctx: &Context<Self>, _old_props: &Self::Properties) -> bool {
-        if ctx.props().invalid_username_or_password {
-            self.error = Some("Invalid username or password".to_string());
-            true
-        } else {
-            false
         }
     }
 }

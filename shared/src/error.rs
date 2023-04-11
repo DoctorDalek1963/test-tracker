@@ -26,6 +26,10 @@ pub enum DieselError {
     #[error("something in the DB was not found")]
     NotFound,
 
+    /// A duplicate key value violates a uniqueness constraint. The values are (message, details, hint).
+    #[error("duplicate key value violates unique constraint: {0}")]
+    UniqueViolation(String, Option<String>, Option<String>),
+
     /// Some other error occurred.
     #[error("{0}")]
     Other(String),
@@ -34,7 +38,7 @@ pub enum DieselError {
 #[cfg(feature = "diesel")]
 mod diesel {
     use super::*;
-    use ::diesel::result::Error as DsErr;
+    use ::diesel::result::{DatabaseErrorKind as Kind, Error as DsErr};
     use tracing::{debug, instrument};
 
     impl From<::diesel::result::Error> for DieselError {
@@ -42,6 +46,13 @@ mod diesel {
         fn from(value: DsErr) -> Self {
             let shared_error = match value {
                 DsErr::NotFound => Self::NotFound,
+                DsErr::DatabaseError(Kind::UniqueViolation, info) => {
+                    let message = info.message().to_string();
+                    let details = info.details().map(ToString::to_string);
+                    let hint = info.hint().map(ToString::to_string);
+                    debug!(?details, ?hint, "UniqueViolation: {message}");
+                    Self::UniqueViolation(message, details, hint)
+                }
                 err => Self::Other(format!("{err:?}")),
             };
             debug!(?shared_error);

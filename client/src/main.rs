@@ -3,7 +3,7 @@
 #![feature(min_specialization)]
 
 use self::{
-    comps::{login_form::LoginOrCreateAccountForm, navbar::Navbar},
+    comps::{error_message::ErrorMessage, login_form::LoginOrCreateAccountForm, navbar::Navbar},
     web::{get_user, local_storage, session_storage},
 };
 use gloo_utils::window;
@@ -39,13 +39,16 @@ struct App {
     /// The user that we may or may not have authenticated.
     user: Option<User>,
 
-    /// Did the user recently enter an invalid username or password?
-    invalid_username_or_password: bool,
+    /// An optional error message to display.
+    error_message: Option<String>,
 }
 
 /// A message to send to the app.
 #[derive(Debug)]
 enum AppMsg {
+    /// Manually change or reset the internal [`error_message`].
+    ChangeErrorMessage(Option<String>),
+
     /// An error from the server has occured. Tell the user.
     SharedError(SharedError),
 
@@ -74,16 +77,22 @@ impl App {
         /// Generate an `onsubmit` callback for logging in or creating an account.
         macro_rules! onsubmit_login_or_create_account {
             ($message:ident) => {
-                ctx.link().callback_future(move |(username, password, remember_me)| {
+                ctx.link().callback_future(move |(username, password, remember_me): (String, String, bool)| {
                     let client = Arc::clone(&REQWEST_CLIENT);
 
                     debug!(
                         ?username, ?password, ?remember_me,
-                        concat!("Authenticating with ", stringify!($message))
+                        concat!("Trying to authenticate with ", stringify!($message))
                     );
 
                     // This async block messages the server to try to authenticate a user
                     async move {
+                        if username.is_empty() || password.is_empty() {
+                            return AppMsg::ChangeErrorMessage(
+                                Some("Please enter a username or password".to_string())
+                            );
+                        }
+
                         debug!("Sending auth request to server");
                         match client
                             .post(env!("SERVER_URL"))
@@ -131,11 +140,20 @@ impl App {
         let onsubmit_login = onsubmit_login_or_create_account!(Authenticate);
         let onsubmit_create_account = onsubmit_login_or_create_account!(CreateUser);
 
+        let error_message = match &self.error_message {
+            Some(msg) => html! {
+                <ErrorMessage msg={msg.clone()} />
+            },
+            None => html! {},
+        };
+
         html! {
+            <>
             <LoginOrCreateAccountForm
                 {onsubmit_login}
-                {onsubmit_create_account}
-                invalid_username_or_password={self.invalid_username_or_password} />
+                {onsubmit_create_account} />
+            {error_message}
+            </>
         }
     }
 
@@ -151,7 +169,7 @@ impl Default for App {
     fn default() -> Self {
         Self {
             user: get_user(),
-            invalid_username_or_password: false,
+            error_message: None,
         }
     }
 }
@@ -203,15 +221,26 @@ impl Component for App {
                 }
 
                 self.user = Some(user);
-                self.invalid_username_or_password = false;
+                self.error_message = None;
 
+                true
+            }
+            AppMsg::ChangeErrorMessage(msg) => {
+                self.error_message = msg;
                 true
             }
             AppMsg::SharedError(error) => match error {
                 SharedError::DatabaseError(SharedDieselError::NotFound)
                 | SharedError::InvalidPassword => {
                     warn!("Invalid username or password");
-                    self.invalid_username_or_password = true;
+                    self.error_message = Some("Invalid username or password".to_string());
+                    true
+                }
+                SharedError::DatabaseError(SharedDieselError::UniqueViolation(_, details, _))
+                    if details.clone().is_some_and(|s| s.contains("username")) =>
+                {
+                    warn!("Username already taken");
+                    self.error_message = Some("Username already taken".to_string());
                     true
                 }
                 e => {
