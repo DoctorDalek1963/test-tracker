@@ -26,7 +26,7 @@ repos:
 
       - id: cargo-fmt
         name: cargo fmt
-        entry: bash -c 'for dir in client server shared; do cd $dir; cargo fmt; cd ..; done'
+        entry: cargo fmt
         language: system
         pass_filenames: false
 

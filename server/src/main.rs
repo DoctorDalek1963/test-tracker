@@ -9,6 +9,7 @@ use tracing_unwrap::ResultExt;
 
 pub(crate) mod db;
 mod passwords;
+mod tests_and_completions;
 
 /// Create a header that will allow the client to function properly without CORS getting in the way.
 fn no_cors_header() -> Header {
