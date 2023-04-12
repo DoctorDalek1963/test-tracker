@@ -42,7 +42,7 @@ mod diesel {
     use ::diesel::result::{DatabaseErrorKind as Kind, Error as DsErr};
     use tracing::{debug, instrument};
 
-    impl From<::diesel::result::Error> for DieselError {
+    impl From<DsErr> for DieselError {
         #[instrument(name = "from_diesel_internal_error", level = "debug")]
         fn from(value: DsErr) -> Self {
             let shared_error = match value {
@@ -58,6 +58,12 @@ mod diesel {
             };
             debug!(?shared_error);
             shared_error
+        }
+    }
+
+    impl From<DsErr> for Error {
+        fn from(value: DsErr) -> Self {
+            Self::DatabaseError(value.into())
         }
     }
 }

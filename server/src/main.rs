@@ -1,15 +1,21 @@
 //! This is the server for TestTracker, which uses a PostgreSQL database to store all the data.
 
-use self::passwords::{add_new_user, validate_user};
+use self::{
+    passwords::{add_new_user, validate_user},
+    tests_and_completions::get_all_tests_and_completions_for_user,
+};
 use color_eyre::Result;
 use test_tracker_shared::{ClientToServerMsg, ServerToClientMsg};
 use tiny_http::{Header, Request, Response};
-use tracing::{error, info, instrument};
+use tracing::{debug, error, info, instrument};
 use tracing_unwrap::ResultExt;
 
 pub(crate) mod db;
 mod passwords;
 mod tests_and_completions;
+
+/// The `.expect()` error message for serializing a [`ServerToClientMsg`].
+const EXPECT_SERIALIZE_MSG: &str = "Serializing a ServerToClientMsg should never fail";
 
 /// Create a header that will allow the client to function properly without CORS getting in the way.
 fn no_cors_header() -> Header {
@@ -36,14 +42,14 @@ async fn handle_request(mut req: Request) -> Result<()> {
         ClientToServerMsg::Authenticate { username, password } => {
             info!(?username, ?password, "Authenticating");
             let validation_result = validate_user(&username, &password).map_err(|e| e.into());
-            info!(?validation_result);
+            debug!(?validation_result);
 
             req.respond(
                 Response::from_string(
                     ron::to_string(&ServerToClientMsg::AuthenticationResponse(
                         validation_result,
                     ))
-                    .expect("Serializing a ServerToClientMsg should never fail"),
+                    .expect(EXPECT_SERIALIZE_MSG),
                 )
                 .with_header(no_cors_header()),
             )?;
@@ -51,14 +57,30 @@ async fn handle_request(mut req: Request) -> Result<()> {
         ClientToServerMsg::CreateUser { username, password } => {
             info!(?username, ?password, "Creating new user");
             let add_new_user_result = add_new_user(&username, &password).map_err(|e| e.into());
-            info!(?add_new_user_result);
+            debug!(?add_new_user_result);
 
             req.respond(
                 Response::from_string(
                     ron::to_string(&ServerToClientMsg::AuthenticationResponse(
                         add_new_user_result,
                     ))
-                    .expect("Serializing a ServerToClientMsg should never fail"),
+                    .expect(EXPECT_SERIALIZE_MSG),
+                )
+                .with_header(no_cors_header()),
+            )?;
+        }
+        ClientToServerMsg::GetTestsAndCompletions { user_id } => {
+            info!(?user_id, "Getting tests and completions");
+            let tests_and_completions_result =
+                get_all_tests_and_completions_for_user(&user_id).map_err(|e| e.into());
+            debug!(?tests_and_completions_result);
+
+            req.respond(
+                Response::from_string(
+                    ron::to_string(&ServerToClientMsg::TestsAndCompletionsForUser(
+                        tests_and_completions_result,
+                    ))
+                    .expect(EXPECT_SERIALIZE_MSG),
                 )
                 .with_header(no_cors_header()),
             )?;

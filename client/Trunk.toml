@@ -1,4 +1,5 @@
 [watch]
+watch = [".", "../shared"]
 ignore = ["sass.css", "sass.css.map", "_main.css"]
 
 [[hooks]]

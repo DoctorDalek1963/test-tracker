@@ -5,7 +5,7 @@ diesel::table! {
         id -> Int4,
         achieved_mark -> Int4,
         total_marks -> Int4,
-        date -> Date,
+        date -> Nullable<Date>,
         comments -> Nullable<Text>,
         test_id -> Int4,
     }

@@ -3,7 +3,7 @@
 #![feature(min_specialization)]
 
 use self::{
-    comps::{error_message::ErrorMessage, login_form::LoginOrCreateAccountForm, navbar::Navbar},
+    comps::{ErrorMessage, ListOfTestsAndCompletions, LoginOrCreateAccountForm, Navbar},
     web::{get_user, local_storage, session_storage},
 };
 use gloo_utils::window;
@@ -12,9 +12,9 @@ use reqwest_wasm::Client;
 use std::{error::Error, sync::Arc};
 use test_tracker_shared::{
     error::DieselError as SharedDieselError, ClientToServerMsg, Error as SharedError,
-    ServerToClientMsg, User,
+    ServerToClientMsg, TestAndCompletions, User,
 };
-use tracing::{debug, error, info, instrument, warn};
+use tracing::{debug, error, info, instrument, trace, warn};
 use tracing_unwrap::ResultExt;
 use tracing_wasm::WASMLayerConfigBuilder;
 use yew::{html, Component, Context, Html};
@@ -39,6 +39,9 @@ struct App {
     /// The user that we may or may not have authenticated.
     user: Option<User>,
 
+    /// The tests and completions of the user.
+    tests_and_completions: Vec<TestAndCompletions>,
+
     /// An optional error message to display.
     error_message: Option<String>,
 }
@@ -55,8 +58,14 @@ enum AppMsg {
     /// An unknown error has occured. Tell the user.
     UnknownError(Box<dyn Error>),
 
+    /// We received an unexpected (but valid) message from the server.
+    UnexpectedServerMsg(ServerToClientMsg),
+
     /// Authenticate a user. The bool reflects the "remember me" checkbox.
     AuthenticateUser(User, bool),
+
+    /// Set the list of tests and completions.
+    SetTestsAndCompletionsList(Vec<TestAndCompletions>),
 }
 
 impl<E: Error + 'static> From<E> for AppMsg {
@@ -71,69 +80,96 @@ impl From<SharedError> for AppMsg {
     }
 }
 
-impl App {
-    #[instrument(skip_all)]
-    fn view_login_screen(&self, ctx: &Context<Self>) -> Html {
-        /// Generate an `onsubmit` callback for logging in or creating an account.
-        macro_rules! onsubmit_login_or_create_account {
-            ($message:ident) => {
-                ctx.link().callback_future(move |(username, password, remember_me): (String, String, bool)| {
-                    let client = Arc::clone(&REQWEST_CLIENT);
+/// Send a message to the server.
+///
+/// This returns a callback future from the given context, which sends a message to the server and
+/// reacts accordingly.
+///
+/// `ctx` is the yew context to create the callback future with.
+/// `args` is the arguments (in a tuple) to the callback.
+/// `args_type` is the type of the arguments tuple.
+/// `pre_send` is any code that you want to execute before sending the message. This code could
+/// early return if you wanted to check that a password was non-empty, for example.
+/// `msg` is the message to send to the server.
+/// `expected_result => reaction` is the "happy path" of the match pattern, where you get the
+/// response that you were expecting. It matches against a [`ServerToClientMsg`].
+macro_rules! send_message_to_server {
+    (
+        $ctx:expr;
+        |$args:tt: $args_type:ty|;
+        $pre_send:block;
+        $msg:expr;
+        $expected_result:pat => $reaction:expr
+    ) => {
+        $ctx.link().callback_future(move |$args: $args_type| {
+            let client = Arc::clone(&REQWEST_CLIENT);
 
-                    debug!(
-                        ?username, ?password, ?remember_me,
-                        concat!("Trying to authenticate with ", stringify!($message))
-                    );
+            async move {
+                $pre_send;
 
-                    // This async block messages the server to try to authenticate a user
-                    async move {
-                        if username.is_empty() || password.is_empty() {
-                            return AppMsg::ChangeErrorMessage(
-                                Some("Please enter a username or password".to_string())
-                            );
-                        }
+                match client
+                    .post(env!("SERVER_URL"))
+                    .body(ron::to_string(&$msg).expect_or_log(
+                        "Converting a ClientToServerMsg to a RON string shouldn't fail",
+                    ))
+                    .send()
+                    .await
+                {
+                    Ok(response) => {
+                        trace!(?response, "Received raw response from server");
+                        let text = response.text().await;
+                        trace!(?text, "Got text from server response");
 
-                        debug!("Sending auth request to server");
-                        match client
-                            .post(env!("SERVER_URL"))
-                            .body(
-                                ron::to_string(&ClientToServerMsg::$message {
-                                    username,
-                                    password,
-                                })
-                                .expect_or_log(
-                                    "Converting a ClientToServerMsg to a RON string shouldn't fail",
-                                ),
-                            )
-                            .send()
-                            .await
-                        {
-                            Ok(response) => {
-                                debug!(?response);
-                                let text = response.text().await;
-                                debug!(?text);
-
-                                match text {
-                                    Ok(body) => {
-                                        let msg = ron::from_str(&body);
-                                        debug!(?msg);
-                                        match msg {
-                                            Ok(msg) => match msg {
-                                                ServerToClientMsg::AuthenticationResponse(result) => match result {
-                                                    Ok(user) => AppMsg::AuthenticateUser(user, remember_me),
-                                                    Err(e) => e.into()
-                                                }
-                                            },
-                                            Err(e) => e.into(),
-                                        }
-                                    }
+                        match text {
+                            Ok(body) => {
+                                let msg = ron::from_str(&body);
+                                trace!(?msg, "Deserialized msg from server response");
+                                match msg {
+                                    Ok(msg) => match msg {
+                                        $expected_result => $reaction,
+                                        msg => AppMsg::UnexpectedServerMsg(msg),
+                                    },
                                     Err(e) => e.into(),
                                 }
                             }
                             Err(e) => e.into(),
                         }
                     }
-                })
+                    Err(e) => e.into(),
+                }
+            }
+        })
+    };
+}
+
+impl App {
+    /// Get the HTML for the login screen.
+    #[instrument(skip_all)]
+    fn view_login_screen(&self, ctx: &Context<Self>) -> Html {
+        /// Generate an `onsubmit` callback for logging in or creating an account.
+        macro_rules! onsubmit_login_or_create_account {
+            ($message:ident) => {
+                send_message_to_server! {
+                    ctx;
+                    |(username, password, remember_me): (String, String, bool)|;
+                    {
+                        debug!(
+                            ?username, ?password, ?remember_me,
+                            concat!("Trying to authenticate with ", stringify!($message))
+                        );
+
+                        if username.is_empty() || password.is_empty() {
+                            return AppMsg::ChangeErrorMessage(
+                                Some("Please enter a username or password".to_string())
+                            );
+                        }
+                    };
+                    ClientToServerMsg::$message { username, password };
+                    ServerToClientMsg::AuthenticationResponse(result) => match result {
+                        Ok(user) => AppMsg::AuthenticateUser(user, remember_me),
+                        Err(e) => e.into(),
+                    }
+                }
             };
         }
 
@@ -157,11 +193,37 @@ impl App {
         }
     }
 
+    /// Get the HTML for the main screen.
     #[instrument(skip_all)]
-    fn view_main_screen(&self, _ctx: &Context<Self>, user: &User) -> Html {
+    fn view_main_screen(&self, _ctx: &Context<Self>) -> Html {
         html! {
-            <p> { format!("Logged in as {}", user.username) } </p>
+            <ListOfTestsAndCompletions list={self.tests_and_completions.clone()} />
         }
+    }
+
+    /// Refresh the internal [`tests_and_completions`](App::tests_and_completions) attribute by
+    /// creating an async callback to get the list from the server and send the
+    /// [`SetTestsAndCompletionsList`](AppMsg::SetTestsAndCompletionsList) message to the app.
+    fn refresh_tests_and_completions_list(&self, ctx: &Context<Self>) {
+        match &self.user {
+            Some(user) => send_message_to_server! {
+                ctx;
+                |user_id: String|;
+                {};
+                ClientToServerMsg::GetTestsAndCompletions { user_id };
+                ServerToClientMsg::TestsAndCompletionsForUser(result) => match result {
+                    Ok(tests_and_completions) => {
+                        debug!(?tests_and_completions);
+                        AppMsg::SetTestsAndCompletionsList(tests_and_completions)
+                    }
+                    Err(e) => e.into(),
+                }
+            }
+            .emit(user.id.clone()),
+            None => {
+                panic!("Cannot refresh tests_and_completions list until the user has logged in")
+            }
+        };
     }
 }
 
@@ -169,6 +231,7 @@ impl Default for App {
     fn default() -> Self {
         Self {
             user: get_user(),
+            tests_and_completions: vec![],
             error_message: None,
         }
     }
@@ -178,13 +241,19 @@ impl Component for App {
     type Message = AppMsg;
     type Properties = ();
 
-    fn create(_ctx: &Context<Self>) -> Self {
-        Self::default()
+    fn create(ctx: &Context<Self>) -> Self {
+        let app = Self::default();
+        // If the user is logged in from last time, then initiate the
+        // async callback to refresh the list
+        if app.user.is_some() {
+            app.refresh_tests_and_completions_list(ctx);
+        }
+        app
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
         let content = match self.user {
-            Some(ref user) => self.view_main_screen(ctx, user),
+            Some(_) => self.view_main_screen(ctx),
             None => self.view_login_screen(ctx),
         };
 
@@ -199,34 +268,45 @@ impl Component for App {
     }
 
     #[instrument(skip_all)]
-    fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
-        debug!(?msg);
+    fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
+        trace!(?msg, "Updating in reponse to message");
         match msg {
             AppMsg::AuthenticateUser(user, remember_me) => {
                 let user_str = ron::to_string(&user)
                     .expect_or_log("We should be able to serialize a User to a String");
 
-                local_storage()
+                session_storage()
                     .set_item(STORAGE_KEY_USER, &user_str)
                     .expect_or_log(
-                        "We should be able to set a localStorage value without a problem",
+                        "We should be able to set a sessionStorage value without a problem",
                     );
 
                 if remember_me {
-                    session_storage()
+                    local_storage()
                         .set_item(STORAGE_KEY_USER, &user_str)
                         .expect_or_log(
-                            "We should be able to set a sessionStorage value without a problem",
+                            "We should be able to set a localStorage value without a problem",
                         );
                 }
 
                 self.user = Some(user);
                 self.error_message = None;
 
+                self.tests_and_completions = vec![];
+                self.refresh_tests_and_completions_list(ctx);
+
+                true
+            }
+            AppMsg::SetTestsAndCompletionsList(list) => {
+                self.tests_and_completions = list;
                 true
             }
             AppMsg::ChangeErrorMessage(msg) => {
                 self.error_message = msg;
+                true
+            }
+            AppMsg::UnexpectedServerMsg(msg) => {
+                self.error_message = Some(format!("{msg:?}"));
                 true
             }
             AppMsg::SharedError(error) => match error {

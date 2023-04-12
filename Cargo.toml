@@ -2,6 +2,7 @@
 members = ["client", "server", "shared"]
 
 [workspace.dependencies]
+chrono = { version = "0.4.24", default-features = false, features = ["std"] }
 diesel = "2.0.3"
 ron = "0.8.0"
 serde = "1.0.159"

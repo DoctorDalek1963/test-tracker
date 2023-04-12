@@ -76,7 +76,7 @@ pub struct Completion {
     pub total_marks: i32,
 
     /// The date of the completion.
-    pub date: NaiveDate,
+    pub date: Option<NaiveDate>,
 
     /// Any extra comments.
     pub comments: Option<String>,
