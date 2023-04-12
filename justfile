@@ -64,3 +64,14 @@ setup:
 # connect to the DB
 connect-db:
 	psql $DATABASE_URL
+
+# backup the DB
+backup-db:
+	@mkdir -p backups
+	pg_dump test_tracker > "backups/backup_$(date -u +'%Y-%m-%d_%H:%M:%S').sql"
+
+# restore a previous DB backup
+restore-db-backup filename:
+	sudo -u postgres dropdb --if-exists test_tracker
+	sudo -u postgres createdb --owner="test_tracker" test_tracker
+	psql test_tracker < "{{invocation_directory()}}/{{filename}}"
