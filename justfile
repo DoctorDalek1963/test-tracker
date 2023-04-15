@@ -49,11 +49,14 @@ doc open='':
 # setup PostgreSQL for test-tracker (assumes a Debian-based OS)
 setup:
 	sudo apt update
-	sudo apt install -y postgresql postgresql-contrib libpq5 libmysqlclient21 libsqlite3-0
+	sudo apt install -y postgresql postgresql-contrib libpq5 libpq-dev
 	sudo npm i -g -D postcss postcss-cli
 	sudo npm i -g cssnano postcss-preset-env sass
+	rustup self update
+	rustup update
 	rustup target add wasm32-unknown-unknown
-	cargo install diesel_cli trunk cargo-watch
+	cargo install diesel_cli --no-default-features --features postgres
+	cargo install trunk cargo-watch
 	sudo systemctl start postgresql.service
 	sudo -u postgres dropdb --if-exists test_tracker
 	sudo -u postgres dropuser --if-exists test_tracker
