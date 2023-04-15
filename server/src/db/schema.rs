@@ -19,6 +19,9 @@ diesel::table! {
         date_or_id -> Text,
         qualification_level -> Nullable<Text>,
         exam_board -> Nullable<Text>,
+        paper_link -> Nullable<Text>,
+        mark_scheme_link -> Nullable<Text>,
+        comments -> Nullable<Text>,
         user_id -> Text,
     }
 }

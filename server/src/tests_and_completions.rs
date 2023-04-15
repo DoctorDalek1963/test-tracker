@@ -18,6 +18,9 @@ impl From<Test> for TestData {
             date_or_id,
             qualification_level,
             exam_board,
+            paper_link,
+            mark_scheme_link,
+            comments,
             ..
         } = value;
 
@@ -27,6 +30,9 @@ impl From<Test> for TestData {
             date_or_id,
             qualification_level,
             exam_board,
+            paper_link,
+            mark_scheme_link,
+            comments,
         }
     }
 }

@@ -72,6 +72,15 @@ pub struct TestData {
 
     /// The exam board for the test: Edexcel, AQA, OCR, etc.
     pub exam_board: Option<String>,
+
+    /// A link to the paper.
+    pub paper_link: Option<String>,
+
+    /// A link to the mark scheme.
+    pub mark_scheme_link: Option<String>,
+
+    /// Any extra comments.
+    pub comments: Option<String>,
 }
 
 /// The important data of the completion.
