@@ -15,11 +15,18 @@ pub struct Props {
 /// individual one.
 #[function_component(ListOfTestsAndCompletions)]
 pub fn list_of_tests_and_completions(Props { list }: &Props) -> Html {
-    list.iter()
+    let tests: Html = list
+        .iter()
         .map(|data| {
             html! {
                 <TestAndCompletions test_and_completions={data.clone()} />
             }
         })
-        .collect()
+        .collect();
+
+    html! {
+        <div class="tests-list">
+            {tests}
+        </div>
+    }
 }

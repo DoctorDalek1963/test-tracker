@@ -19,6 +19,32 @@
 	--grayscale-8: #495057;
 	--grayscale-9: #343a40;
 	--grayscale-10: #212529;
+
+	// https://coolors.co/palette/ff7b00-ff8800-ff9500-ffa200-ffaa00-ffb700-ffc300-ffd000-ffdd00-ffea00
+	--orange-1: #ffea00;
+	--orange-2: #ffdd00;
+	--orange-3: #ffd000;
+	--orange-4: #ffc300;
+	--orange-5: #ffb700;
+	--orange-6: #ffaa00;
+	--orange-7: #ffa200;
+	--orange-8: #ff9500;
+	--orange-9: #ff8800;
+	--orange-10: #ff7b00;
+
+	// https://coolors.co/palette/03045e-023e8a-0077b6-0096c7-00b4d8-48cae4-90e0ef-ade8f4-caf0f8
+	--blue-1: #caf0f8;
+	--blue-2: #ade8f4;
+	--blue-3: #90e0ef;
+	--blue-4: #48cae4;
+	--blue-5: #00b4d8;
+	--blue-6: #0096c7;
+	--blue-7: #0077b6;
+	--blue-8: #023e8a;
+	--blue-9: #03045e;
+
+	--test-border: var(--orange-6);
+	--test-background: var(--orange-3);
 }
 
 html, body {
@@ -162,6 +188,49 @@ div.login-or-create-account-form {
 			margin: 0.4ex auto 0;
 			grid-column: 1 2;
 			padding: 0.5em;
+		}
+	}
+}
+
+div.tests-list {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	flex-direction: column;
+
+	color: var(--grayscale-10);
+
+	div.test {
+		border: solid var(--test-border);
+		background: var(--test-background);
+		border-radius: 0.5em;
+		margin-top: 2.5ex;
+
+		div.title {
+			background: var(--orange-4);
+			border-bottom: solid var(--test-border);
+			padding: 0.3em;
+
+			span.subject {
+				font-weight: bold;
+			}
+		}
+
+		div.content {
+			padding: 1.2em;
+
+			div.completions-list {
+				display: flex;
+				justify-content: center;
+				flex-direction: column;
+
+				div.completion {
+					border: solid red;
+					border-radius: 0.5em;
+					padding: 0.3em;
+					margin-top: 0.8ex;
+				}
+			}
 		}
 	}
 }

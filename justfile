@@ -51,7 +51,7 @@ setup:
 	sudo apt update
 	sudo apt install -y postgresql postgresql-contrib libpq5 libpq-dev
 	sudo npm i -g -D postcss postcss-cli
-	sudo npm i -g cssnano postcss-preset-env sass
+	sudo npm i -g cssnano postcss-preset-env postcss-prune-var sass
 	rustup self update
 	rustup update
 	rustup target add wasm32-unknown-unknown
